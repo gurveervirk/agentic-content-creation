@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
 import { Send, RefreshCw } from "lucide-react";
@@ -17,7 +16,6 @@ const Chat: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -25,7 +23,6 @@ const Chat: React.FC = () => {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
-    // Add user message instantly
     setMessages((prev) => [
       ...prev,
       { sender: "user", content: trimmed }
@@ -33,7 +30,6 @@ const Chat: React.FC = () => {
     setLoading(true);
     setInput("");
 
-    // Add loading placeholder
     setMessages((prev) => [
       ...prev,
       { sender: "agent", content: "..." }
@@ -47,7 +43,6 @@ const Chat: React.FC = () => {
       });
       if (!res.ok) throw new Error("Network error");
       const data = await res.json();
-      // Remove placeholder, add real agent message
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { sender: "agent", content: data.response || "" },
@@ -84,7 +79,6 @@ const Chat: React.FC = () => {
       if (!res.ok) throw new Error("Network error");
       const data = await res.json();
       setMessages([]);
-      // Toast confirmation
       toast({
         title: "Chat reset",
         description: data?.message || "Workflow reset successfully."
@@ -99,25 +93,23 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50">
-      {/* Top bar with Reset */}
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b border-gray-200 sticky top-0 z-10">
-        <div className="font-semibold text-lg text-gray-700">Chat</div>
+    <div className="flex flex-col h-[100dvh] bg-purple-50/50">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b border-purple-100 sticky top-0 z-10 shadow-sm">
+        <div className="font-semibold text-lg text-purple-900">Chat</div>
         <Button
           onClick={handleReset}
           variant="outline"
           size="sm"
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
           disabled={loading}
         >
           <RefreshCw size={16} /> Reset Chat
         </Button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-auto px-2 py-4">
+      <div className="flex-1 overflow-auto px-4 py-6 space-y-3">
         {messages.length === 0 && !loading && (
-          <div className="text-center text-gray-400 mt-12">
+          <div className="text-center text-purple-400 mt-12">
             Start your conversation!
           </div>
         )}
@@ -134,11 +126,10 @@ const Chat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input box */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 sticky bottom-0">
-        <div className="flex gap-2 items-center">
+      <div className="bg-white border-t border-purple-100 px-4 py-4 sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+        <div className="flex gap-2 items-center max-w-4xl mx-auto">
           <Input
-            className="flex-1"
+            className="flex-1 border-purple-200 focus-visible:ring-purple-400"
             placeholder="Type a message..."
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -150,8 +141,7 @@ const Chat: React.FC = () => {
           <Button
             onClick={handleSend}
             disabled={!input.trim() || loading}
-            variant="default"
-            className="flex gap-1 items-center"
+            className="bg-purple-600 hover:bg-purple-700 text-white flex gap-1 items-center"
           >
             <Send size={18} /> Send
           </Button>
@@ -162,4 +152,3 @@ const Chat: React.FC = () => {
 };
 
 export default Chat;
-

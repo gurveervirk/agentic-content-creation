@@ -3,7 +3,15 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { marked } from "marked";
 
-// Simple XSS mitigation for demo; production apps require better!
+// Enable HTML in markdown
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+  headerIds: false,
+  mangle: false
+});
+
+// Simple XSS mitigation
 function sanitize(text: string) {
   const doc = new DOMParser().parseFromString(text, "text/html");
   return doc.body.innerHTML;
@@ -17,21 +25,21 @@ type Props = {
 const ChatMessage: React.FC<Props> = ({ sender, content }) => {
   const isUser = sender === "user";
   const isAgent = sender === "agent";
+  
   const bg = isUser
-    ? "bg-primary text-white"
+    ? "bg-purple-600 text-white"
     : isAgent
-      ? "bg-gray-200 text-gray-900"
+      ? "bg-white text-gray-900 border border-purple-100"
       : "bg-yellow-100 text-yellow-800";
 
   // For agent, render HTML + markdown. For user, render as-is.
   let messageBody;
   if (isAgent) {
-    // Allow HTML AND markdown (marked can parse HTML in markdown)
-    const raw = marked.parse(content);
+    const html = marked(content);
     messageBody = (
       <div
-        className="prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: sanitize(raw) }}
+        className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+        dangerouslySetInnerHTML={{ __html: sanitize(html) }}
       />
     );
   } else {
@@ -47,7 +55,7 @@ const ChatMessage: React.FC<Props> = ({ sender, content }) => {
     >
       <div
         className={cn(
-          "rounded-xl px-4 py-2 max-w-[75%] shadow",
+          "rounded-xl px-4 py-2 max-w-[75%] shadow-sm",
           bg
         )}
       >
@@ -58,4 +66,3 @@ const ChatMessage: React.FC<Props> = ({ sender, content }) => {
 };
 
 export default ChatMessage;
-
