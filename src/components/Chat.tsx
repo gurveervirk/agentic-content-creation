@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
 import { Send, RefreshCw } from "lucide-react";
@@ -5,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
-type Message = { sender: "user" | "agent" | "system"; content: string };
+type Message = { 
+  sender: "user" | "agent" | "system"; 
+  content: string; 
+  loading?: boolean;
+};
 
 const API_BASE = "http://localhost:8000";
 
@@ -23,6 +28,8 @@ const Chat: React.FC = () => {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
+    
+    // Add user message
     setMessages((prev) => [
       ...prev,
       { sender: "user", content: trimmed }
@@ -30,9 +37,10 @@ const Chat: React.FC = () => {
     setLoading(true);
     setInput("");
 
+    // Add loading message
     setMessages((prev) => [
       ...prev,
-      { sender: "agent", content: "..." }
+      { sender: "agent", content: "", loading: true }
     ]);
 
     try {
@@ -43,11 +51,14 @@ const Chat: React.FC = () => {
       });
       if (!res.ok) throw new Error("Network error");
       const data = await res.json();
+      
+      // Replace loading message with actual response
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { sender: "agent", content: data.response || "" },
+        { sender: "agent", content: data.response || "" }
       ]);
     } catch (err) {
+      // Replace loading message with error message
       setMessages((prev) => [
         ...prev.slice(0, -1),
         {
@@ -118,11 +129,9 @@ const Chat: React.FC = () => {
             key={i}
             sender={msg.sender}
             content={msg.content}
+            loading={msg.loading}
           />
         ))}
-        {loading && (
-          <div ref={messagesEndRef} />
-        )}
         <div ref={messagesEndRef} />
       </div>
 
