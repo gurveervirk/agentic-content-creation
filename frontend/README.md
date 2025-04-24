@@ -1,8 +1,8 @@
-# Render Chat Flow - Frontend
+# Agentic Content Creator - Frontend
 
 ## Overview
 
-This is the frontend application for Render Chat Flow, a modern chat interface designed to interact with AI-powered backend services. Built with React, TypeScript, and Vite, it provides a responsive and intuitive user experience.
+This is the frontend application for Agentic Content Creator, a modern chat interface designed to interact with AI-powered backend services. Built with React, TypeScript, and Vite, it provides a responsive and intuitive user experience.
 
 ## Technology Stack
 
