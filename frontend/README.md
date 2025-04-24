@@ -1,73 +1,144 @@
-# Welcome to your Lovable project
+# Render Chat Flow - Frontend
 
-## Project info
+## Overview
 
-**URL**: https://lovable.dev/projects/410b632d-3a22-407e-b25c-d0e9eb6339db
+This is the frontend application for Render Chat Flow, a modern chat interface designed to interact with AI-powered backend services. Built with React, TypeScript, and Vite, it provides a responsive and intuitive user experience.
 
-## How can I edit this code?
+## Technology Stack
 
-There are several ways of editing your application.
+- **React 18**: For building the component-based UI
+- **TypeScript**: For type safety and better developer experience
+- **Vite**: For fast development and optimized builds
+- **TailwindCSS**: For utility-first styling
+- **shadcn/ui**: For consistent, accessible UI components
+- **React Router**: For client-side routing
+- **React Query**: For data fetching, caching, and state management
+- **React Markdown**: For rendering markdown content from AI responses
 
-**Use Lovable**
+## Project Structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/410b632d-3a22-407e-b25c-d0e9eb6339db) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+frontend/
+│
+├── public/              # Static files
+│
+├── src/
+│   ├── components/      # UI components
+│   │   ├── ui/          # shadcn UI components
+│   │   ├── Chat.tsx     # Main chat interface
+│   │   └── ChatMessage.tsx # Individual message component
+│   │
+│   ├── hooks/           # Custom React hooks
+│   │   └── use-toast.ts # Toast notification hook
+│   │
+│   ├── lib/             # Utility functions
+│   │   └── utils.ts     # Common utility functions
+│   │
+│   ├── pages/           # Route components
+│   │   ├── Index.tsx    # Main application page
+│   │   └── NotFound.tsx # 404 page
+│   │
+│   ├── App.tsx          # Root application component
+│   ├── index.css        # Global styles and Tailwind imports
+│   ├── main.tsx         # Application entry point
+│   └── vite-env.d.ts    # TypeScript declarations
+│
+├── .eslintrc.js         # ESLint configuration
+├── index.html           # HTML template
+├── package.json         # Dependencies and scripts
+├── postcss.config.js    # PostCSS configuration
+├── tailwind.config.ts   # Tailwind configuration
+├── tsconfig.json        # TypeScript configuration
+└── vite.config.ts       # Vite configuration
 ```
 
-**Edit a file directly in GitHub**
+## Component Breakdown
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Chat Component
 
-**Use GitHub Codespaces**
+The `Chat.tsx` component is the core of the application, featuring:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- State management for chat messages using React hooks
+- Form handling for user input
+- API integration with the backend server
+- Loading states and error handling
+- Responsive design for different screen sizes
 
-## What technologies are used for this project?
+```tsx
+// Simplified excerpt from Chat.tsx
+const Chat = () => {
+  const [messages, setMessages] =
+    useState < Array<{ sender: string; content: string }>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-This project is built with:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Send message to API and handle response
+    // ...
+  };
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+  return (
+    <div className="flex flex-col h-full">
+      {/* Chat interface components */}
+    </div>
+  );
+};
+```
 
-## How can I deploy this project?
+### ChatMessage Component
 
-Simply open [Lovable](https://lovable.dev/projects/410b632d-3a22-407e-b25c-d0e9eb6339db) and click on Share -> Publish.
+The `ChatMessage.tsx` component renders individual messages with:
 
-## Can I connect a custom domain to my Lovable project?
+- Different styling based on sender (user vs. agent)
+- Markdown rendering for agent responses
+- Loading indicators
+- Hover effects and animations
 
-Yes, you can!
+## Theming
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The application uses a custom theme built on TailwindCSS with:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- CSS variables for color tokens
+- Deep purple accent color scheme
+- Responsive design considerations
+- Dark/light mode support (prepared but not fully implemented)
+
+## API Integration
+
+The frontend communicates with the backend API using fetch:
+
+- Sends user messages to `/api/chat` endpoint
+- Resets conversation with `/api/reset` endpoint
+- Handles loading states and errors gracefully
+
+## Development Workflow
+
+1. **Installation**:
+
+   ```bash
+   npm install
+   ```
+
+2. **Development Server**:
+
+   ```bash
+   npm run dev
+   ```
+
+3. **Building for Production**:
+   ```bash
+   npm run build
+   ```
+
+## Future Enhancements
+
+- Implement real-time message streaming
+- Add user authentication
+- Develop conversation history/storage
+- Create theme switching capability
+- Add accessibility improvements
+
+## Contributing
+
+Please refer to the main project README for contribution guidelines.
