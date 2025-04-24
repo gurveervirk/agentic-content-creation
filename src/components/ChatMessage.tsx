@@ -16,7 +16,7 @@ const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
   const isLoading = loading && isAgent;
   
   const bg = isLoading 
-    ? "bg-deep-purple-50 text-deep-purple-600 border border-deep-purple-100"
+    ? "bg-white text-deep-purple-600 border border-deep-purple-100"
     : isUser
       ? "bg-deep-purple-600 text-white"
       : "bg-white text-deep-purple-600 border border-deep-purple-100";
@@ -41,11 +41,10 @@ const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
   if (isAgent) {
     messageBody = (
       <ReactMarkdown 
-        className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0"
         components={{
-          h1: 'h2',  // Prevent oversized headings
-          pre: 'pre',
-          code: 'code',
+          h1: ({ node, ...props }) => <h2 {...props} />,
+          pre: ({ node, ...props }) => <pre {...props} />,
+          code: ({ node, ...props }) => <code {...props} />,
         }}
       >
         {content}
@@ -75,4 +74,3 @@ const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
 };
 
 export default ChatMessage;
-

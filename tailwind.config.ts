@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -64,8 +65,7 @@ export default {
         },
         'deep-purple': {
           DEFAULT: '#1A1F2C',
-          '50': '#9b87f5',
-          '100': '#D6BCFA',
+          '100': '#1A1F2C',
           '600': '#1A1F2C'
         }
       },

@@ -106,14 +106,14 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-deep-purple-50/50">
-      <div className="flex items-center justify-between bg-deep-purple-600 px-4 py-3 border-b border-deep-purple-100 sticky top-0 z-10 shadow-sm">
+    <div className="flex flex-col h-[100dvh] bg-white">
+      <div className="flex items-center justify-between bg-deep-purple-600 px-4 py-3 border-b border-white sticky top-0 z-10 shadow-sm">
         <div className="font-semibold text-lg text-white">Chat</div>
         <Button
           onClick={handleReset}
           variant="outline"
           size="sm"
-          className="flex items-center gap-1 text-white hover:text-deep-purple-50 hover:bg-white/10 transition-all duration-300 ease-in-out transform hover:scale-105"
+          className="flex items-center gap-1 text-white hover:text-white hover:bg-white/10 transition-all duration-300 ease-in-out transform hover:scale-105"
           disabled={loading}
         >
           <RefreshCw size={16} /> Reset Chat
@@ -137,10 +137,10 @@ const Chat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="bg-white border-t border-deep-purple-100 px-4 py-4 sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+      <div className="bg-deep-purple-600 border-t border-white px-4 py-4 sticky bottom-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
         <div className="flex gap-2 items-center max-w-4xl mx-auto">
           <Input
-            className="flex-1 border-deep-purple-200 focus-visible:ring-deep-purple-400 transition-all duration-300 hover:shadow-hover-elevation"
+            className="flex-1 bg-white border-white focus-visible:ring-white text-deep-purple-600 transition-all duration-300 hover:shadow-hover-elevation"
             placeholder="Type a message..."
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -152,7 +152,7 @@ const Chat: React.FC = () => {
           <Button
             onClick={handleSend}
             disabled={!input.trim() || loading}
-            className="bg-deep-purple-600 hover:bg-deep-purple-600/90 text-white flex gap-1 items-center transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
+            className="bg-white hover:bg-white/90 text-deep-purple-600 flex gap-1 items-center transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
           >
             <Send size={18} /> Send
           </Button>
@@ -163,4 +163,3 @@ const Chat: React.FC = () => {
 };
 
 export default Chat;
-
