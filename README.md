@@ -1,8 +1,8 @@
-# Render Chat Flow
+# Agentic Content Creator
 
 ## Project Overview
 
-Render Chat Flow is a full-stack application that provides an interactive chat interface with AI capabilities. The application consists of a React-based frontend for the user interface and a Python-based backend for handling chat logic and integrating with AI services.
+Agentic Content Creator is a full-stack application that provides an interactive chat interface with AI capabilities. The application consists of a React-based frontend for the user interface and a Python-based backend for handling chat logic and integrating with AI services.
 
 ## Architecture
 
