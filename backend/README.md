@@ -1,13 +1,13 @@
-# Render Chat Flow - Backend
+# Agentic Content Creator - Backend
 
 ## Overview
 
-The backend for Render Chat Flow provides the AI-powered chat functionality and serves as the API for the frontend application. Built using Python, it orchestrates AI workflows, manages contextual memory, and integrates with various external knowledge tools.
+The backend for Agentic Content Creator provides the AI-powered chat functionality and serves as the API for the frontend application. Built using Python, it orchestrates AI workflows, manages contextual memory, and integrates with various external knowledge tools.
 
 ## Technology Stack
 
 - **Python 3.10+**: Core programming language
-- **FastAPI/Flask** (implied): Web framework for API endpoints
+- **FastAPI**: Web framework for API endpoints
 - **LLM Integration**: Integration with large language models (Gemini)
 - **External API Integrations**: Tools for various knowledge sources
 
