@@ -7,8 +7,14 @@ import { Send, RefreshCw } from "lucide-react";
 // Define API_BASE or use environment variable
 const API_BASE = "/api"; // Adjust this as needed for your API endpoint
 
+interface Message {
+  sender: "user" | "agent" | "system";
+  content: string;
+  loading?: boolean;
+}
+
 const Chat = () => {
-  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent" | "system", content: string }>>([]);
+  const [messages, setMessages] = useState<Array<Message>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -47,35 +53,47 @@ const Chat = () => {
     setMessages(prev => [...prev, { sender: "agent", content: "Thinking...", loading: true }]);
     
     try {
-      // Replace this with your actual API call
-      // For now using a timeout to simulate API response
-      setTimeout(() => {
-        setMessages(prev => prev.filter(msg => !msg.loading));
-        setMessages(prev => [...prev, { 
-          sender: "agent", 
-          content: "This is a sample response. Connect to your actual API for real responses."
-        }]);
-        setLoading(false);
-      }, 1500);
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+      
+      const data = await response.json();
+      
+      // Remove loading message
+      setMessages(prev => prev.filter(msg => !msg.loading));
+      
+      // Add response from API
+      setMessages(prev => [...prev, { 
+        sender: "agent", 
+        content: data.message || "No response from API"
+      }]);
     } catch (error) {
       setMessages(prev => prev.filter(msg => !msg.loading));
       setMessages(prev => [...prev, { 
         sender: "agent", 
         content: "Sorry, there was an error processing your request."
       }]);
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-deep-purple-100 p-4 text-white shadow-md">
+      <div className="bg-[#7842f5] p-4 text-white shadow-md">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">Chat</h1>
           <button
             onClick={handleReset}
-            className="bg-white text-deep-purple-100 px-3 py-1 rounded-md flex items-center gap-2 hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md"
+            className="bg-white text-[#7842f5] px-3 py-1 rounded-md flex items-center gap-2 hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md"
             disabled={loading}
           >
             <RefreshCw className="w-4 h-4" /> Reset
@@ -102,19 +120,19 @@ const Chat = () => {
       </div>
       
       {/* Input Area */}
-      <div className="bg-deep-purple-100 p-4">
+      <div className="bg-[#7842f5] p-4">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-deep-purple-100 transition-all duration-300"
+            className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#7842f5] transition-all duration-300"
             placeholder="Type a message..."
             disabled={loading}
           />
           <button
             type="submit"
-            className="bg-white text-deep-purple-100 px-4 py-2 rounded-md hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-2"
+            className="bg-white text-[#7842f5] px-4 py-2 rounded-md hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-2"
             disabled={loading || !input.trim()}
           >
             <Send className="w-4 h-4" /> Send

@@ -16,10 +16,10 @@ const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
   const isLoading = loading && isAgent;
   
   const bg = isLoading 
-    ? "bg-white text-deep-purple-600 border border-deep-purple-100"
+    ? "bg-white text-[#7842f5] border border-[#7842f5]"
     : isUser
-      ? "bg-deep-purple-600 text-white"
-      : "bg-white text-deep-purple-600 border border-deep-purple-100";
+      ? "bg-[#7842f5] text-white"
+      : "bg-white text-[#7842f5] border border-[#7842f5]";
 
   // Render loading state for agent
   if (isLoading) {
