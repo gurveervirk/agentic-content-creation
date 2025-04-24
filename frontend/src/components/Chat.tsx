@@ -1,81 +1,17 @@
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState } from "react";
 import ChatMessage from "./ChatMessage";
+import { useToast } from "@/hooks/use-toast";
 import { Send, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
 
-type Message = { sender: "user" | "agent" | "system"; content: string };
+// Define API_BASE or use environment variable
+const API_BASE = "/api"; // Adjust this as needed for your API endpoint
 
-const API_BASE = "http://localhost:8000";
-
-const Chat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+const Chat = () => {
+  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent" | "system", content: string }>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  // Scroll to bottom on new message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  const handleSend = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading) return;
-    // Add user message instantly
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", content: trimmed }
-    ]);
-    setLoading(true);
-    setInput("");
-
-    // Add loading placeholder
-    setMessages((prev) => [
-      ...prev,
-      { sender: "agent", content: "..." }
-    ]);
-
-    try {
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
-      });
-      if (!res.ok) throw new Error("Network error");
-      const data = await res.json();
-      // Remove placeholder, add real agent message
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        { sender: "agent", content: data.response || "" },
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        {
-          sender: "system",
-          content: "Error: Unable to fetch a response."
-        }
-      ]);
-      toast({
-        title: "Network error",
-        description:
-          "Could not connect to chat API. Please try again.",
-        variant: "destructive"
-      });
-    }
-    setLoading(false);
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const { toast } = useToast();
 
   const handleReset = async () => {
     setLoading(true);
@@ -84,82 +20,109 @@ const Chat: React.FC = () => {
       if (!res.ok) throw new Error("Network error");
       const data = await res.json();
       setMessages([]);
-      // Toast confirmation
       toast({
         title: "Chat reset",
-        description: data?.message || "Workflow reset successfully."
+        description: data?.message || "Workflow reset successfully.",
+        duration: 1500  // Shortened toast duration
       });
     } catch {
       toast({
         title: "Failed to reset chat",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 1500
       });
     }
     setLoading(false);
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+    
+    const userMessage = input;
+    setInput("");
+    setMessages(prev => [...prev, { sender: "user", content: userMessage }]);
+    
+    setLoading(true);
+    setMessages(prev => [...prev, { sender: "agent", content: "Thinking...", loading: true }]);
+    
+    try {
+      // Replace this with your actual API call
+      // For now using a timeout to simulate API response
+      setTimeout(() => {
+        setMessages(prev => prev.filter(msg => !msg.loading));
+        setMessages(prev => [...prev, { 
+          sender: "agent", 
+          content: "This is a sample response. Connect to your actual API for real responses."
+        }]);
+        setLoading(false);
+      }, 1500);
+    } catch (error) {
+      setMessages(prev => prev.filter(msg => !msg.loading));
+      setMessages(prev => [...prev, { 
+        sender: "agent", 
+        content: "Sorry, there was an error processing your request."
+      }]);
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50">
-      {/* Top bar with Reset */}
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b border-gray-200 sticky top-0 z-10">
-        <div className="font-semibold text-lg text-gray-700">Chat</div>
-        <Button
-          onClick={handleReset}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-1"
-          disabled={loading}
-        >
-          <RefreshCw size={16} /> Reset Chat
-        </Button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-auto px-2 py-4">
-        {messages.length === 0 && !loading && (
-          <div className="text-center text-gray-400 mt-12">
-            Start your conversation!
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <ChatMessage
-            key={i}
-            sender={msg.sender}
-            content={msg.content}
-          />
-        ))}
-        {loading && (
-          <div ref={messagesEndRef} />
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input box */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 sticky bottom-0">
-        <div className="flex gap-2 items-center">
-          <Input
-            className="flex-1"
-            placeholder="Type a message..."
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleInputKeyDown}
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="bg-deep-purple-100 p-4 text-white shadow-md">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold">Chat</h1>
+          <button
+            onClick={handleReset}
+            className="bg-white text-deep-purple-100 px-3 py-1 rounded-md flex items-center gap-2 hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md"
             disabled={loading}
-            autoFocus
-            maxLength={1000}
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || loading}
-            variant="default"
-            className="flex gap-1 items-center"
           >
-            <Send size={18} /> Send
-          </Button>
+            <RefreshCw className="w-4 h-4" /> Reset
+          </button>
         </div>
+      </div>
+      
+      {/* Messages Area */}
+      <div className="flex-1 p-4 overflow-y-auto bg-white">
+        {messages.length === 0 ? (
+          <div className="text-center text-gray-400 mt-8">
+            No messages yet. Start a conversation!
+          </div>
+        ) : (
+          messages.map((message, index) => (
+            <ChatMessage
+              key={index}
+              sender={message.sender}
+              content={message.content}
+              loading={message.loading}
+            />
+          ))
+        )}
+      </div>
+      
+      {/* Input Area */}
+      <div className="bg-deep-purple-100 p-4">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-deep-purple-100 transition-all duration-300"
+            placeholder="Type a message..."
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            className="bg-white text-deep-purple-100 px-4 py-2 rounded-md hover:bg-gray-100 transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-2"
+            disabled={loading || !input.trim()}
+          >
+            <Send className="w-4 h-4" /> Send
+          </button>
+        </form>
       </div>
     </div>
   );
 };
 
 export default Chat;
-

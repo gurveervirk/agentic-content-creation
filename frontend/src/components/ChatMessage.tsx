@@ -1,38 +1,54 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { marked } from "marked";
-
-// Simple XSS mitigation for demo; production apps require better!
-function sanitize(text: string) {
-  const doc = new DOMParser().parseFromString(text, "text/html");
-  return doc.body.innerHTML;
-}
+import { Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 type Props = {
   sender: "user" | "agent" | "system";
   content: string;
+  loading?: boolean;
 };
 
-const ChatMessage: React.FC<Props> = ({ sender, content }) => {
+const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
   const isUser = sender === "user";
   const isAgent = sender === "agent";
-  const bg = isUser
-    ? "bg-primary text-white"
-    : isAgent
-      ? "bg-gray-200 text-gray-900"
-      : "bg-yellow-100 text-yellow-800";
+  const isLoading = loading && isAgent;
+  
+  const bg = isLoading 
+    ? "bg-white text-deep-purple-600 border border-deep-purple-100"
+    : isUser
+      ? "bg-deep-purple-600 text-white"
+      : "bg-white text-deep-purple-600 border border-deep-purple-100";
+
+  // Render loading state for agent
+  if (isLoading) {
+    return (
+      <div className="flex justify-start mb-2">
+        <div className={cn(
+          "rounded-xl px-4 py-2 max-w-[75%] shadow-sm flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-hover-elevation",
+          bg
+        )}>
+          <Loader2 className="animate-spin w-5 h-5" />
+          <span>Thinking...</span>
+        </div>
+      </div>
+    );
+  }
 
   // For agent, render HTML + markdown. For user, render as-is.
   let messageBody;
   if (isAgent) {
-    // Allow HTML AND markdown (marked can parse HTML in markdown)
-    const raw = marked.parse(content);
     messageBody = (
-      <div
-        className="prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: sanitize(raw) }}
-      />
+      <ReactMarkdown 
+        components={{
+          h1: ({ node, ...props }) => <h2 {...props} />,
+          pre: ({ node, ...props }) => <pre {...props} />,
+          code: ({ node, ...props }) => <code {...props} />,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     );
   } else {
     messageBody = <span>{content}</span>;
@@ -41,13 +57,13 @@ const ChatMessage: React.FC<Props> = ({ sender, content }) => {
   return (
     <div
       className={cn(
-        "flex mb-2",
+        "flex mb-2 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-hover-elevation",
         isUser ? "justify-end" : "justify-start"
       )}
     >
       <div
         className={cn(
-          "rounded-xl px-4 py-2 max-w-[75%] shadow",
+          "rounded-xl px-4 py-2 max-w-[75%] shadow-sm",
           bg
         )}
       >
@@ -58,4 +74,3 @@ const ChatMessage: React.FC<Props> = ({ sender, content }) => {
 };
 
 export default ChatMessage;
-
