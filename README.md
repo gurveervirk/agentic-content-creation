@@ -31,6 +31,7 @@ render-chat-flow/
 - **Theming**: Custom theming with a purple-based color scheme
 - **Chat History**: Persistent chat history for user reference
 - **Seamless Multi-Source Information Retrieval**: Ability to query multiple sources for information, depending on the user's needs
+- **Smart Memory and State Management**: Efficient memory management to keep track of agent interactions, including generated content
 
 ## Getting Started
 
