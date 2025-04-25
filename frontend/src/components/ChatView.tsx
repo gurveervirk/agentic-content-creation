@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, RefreshCw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Define API_BASE
 const API_BASE = "/api";
 
 const ChatView = () => {
@@ -30,19 +29,14 @@ const ChatView = () => {
     try {
       const res = await fetch(`${API_BASE}/load-context`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       
       if (!res.ok) throw new Error("Failed to load context");
       
       const data = await res.json();
-      // Assuming chat_history is a string that needs parsing
-      // You might need to adjust this based on how the data is actually structured
-      const chatHistory = data.chat_history;
-      setMessages(chatHistory || []);
+      setMessages(data.chat_history || []);
       
     } catch (error) {
       console.error("Error loading context:", error);
@@ -68,7 +62,6 @@ const ChatView = () => {
         description: data?.message || "Workflow reset successfully.",
         duration: 1500
       });
-      // Refresh contexts list
       queryClient.invalidateQueries({ queryKey: ["contexts"] });
     } catch (error) {
       toast({
@@ -94,40 +87,26 @@ const ChatView = () => {
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage }),
       });
 
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
 
       const data = await res.json();
-
-      // Remove loading placeholder
       setMessages(prev => prev.filter(msg => !msg.loading));
-      
-      // Add actual response
       setMessages(prev => [...prev, { 
         sender: "agent", 
         content: data.response || "No response received."
       }]);
-
-      // Refresh contexts list after a successful chat
       queryClient.invalidateQueries({ queryKey: ["contexts"] });
     } catch (error) {
       console.error("Error sending message:", error);
-      
-      // Remove loading placeholder
       setMessages(prev => prev.filter(msg => !msg.loading));
-      
       setMessages(prev => [...prev, { 
         sender: "agent", 
         content: "Sorry, there was an error processing your request."
       }]);
-      
       toast({
         title: "Error",
         description: "Failed to send message",

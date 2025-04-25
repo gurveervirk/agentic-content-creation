@@ -1,15 +1,10 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { MessageSquare, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-
-type Context = {
-  title: string;
-  id: string;
-};
 
 const API_BASE = "/api";
 
@@ -24,13 +19,10 @@ const ChatSidebar = () => {
       const res = await fetch(`${API_BASE}/get-contexts`);
       if (!res.ok) throw new Error("Failed to fetch contexts");
       const data = await res.json();
-      
-      // Transform contexts object into array of {title, id}
-      const contexts: Context[] = Object.entries(data.contexts || {}).map(
-        ([title, id]) => ({ title, id: id as string })
-      );
-      
-      return contexts;
+      return Object.entries(data.contexts || {}).map(([title, id]) => ({
+        title,
+        id: id as string,
+      }));
     },
   });
 
@@ -38,17 +30,13 @@ const ChatSidebar = () => {
     try {
       const res = await fetch(`${API_BASE}/load-context`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       
       if (!res.ok) throw new Error("Failed to load context");
       
-      // Set active chat
       setActiveChat(id);
-      
       toast({
         title: "Chat loaded",
         description: "Previous conversation loaded successfully",
@@ -74,7 +62,6 @@ const ChatSidebar = () => {
             size="sm" 
             className="border-black hover:bg-black hover:text-white transition-all duration-300"
             onClick={() => {
-              // Reset current chat
               setActiveChat(null);
               window.location.reload();
             }}
@@ -97,7 +84,7 @@ const ChatSidebar = () => {
                 data.map((context) => (
                   <SidebarMenuItem key={context.id}>
                     <SidebarMenuButton 
-                      onClick={() => loadContext(context.id)} 
+                      onClick={() => loadContext(context.id)}
                       className={`transition-all duration-200 hover:scale-102 ${activeChat === context.id ? 'bg-black text-white' : ''}`}
                     >
                       <MessageSquare className="w-4 h-4" />

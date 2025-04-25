@@ -6,11 +6,11 @@ import ChatSidebar from "@/components/ChatSidebar";
 const Index = () => {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-white">
+      <div className="flex min-h-screen w-full overflow-hidden">
         <ChatSidebar />
-        <div className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col bg-white">
           <ChatView />
-        </div>
+        </main>
       </div>
     </SidebarProvider>
   );
