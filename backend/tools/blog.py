@@ -233,16 +233,19 @@ async def prepare_blog_post(ctx: Context, title: str, content_html: str) -> str:
     """
     try:
         state = await ctx.get("state")
-        state["blog_post"] = {
+        if "blog_posts" not in state:
+            state["blog_posts"] = {}
+        # Store the blog post data in the context state
+        state["blog_posts"][title] = {
             "title": title,
             "content_html": content_html
-        }
-        return "Blog post prepared in context."
+        } 
+        return f"Blog post set in context, under title: {title} as key."
     except Exception as e:
         logging.error(f"Error preparing blog post in context: {e}")
         return "Failed to prepare blog post in context."
     
-async def read_prepared_blog_post(ctx: Context) -> Dict[str, str] | str:
+async def read_prepared_blog_post(ctx: Context, title: str) -> Dict[str, str] | str:
     """Reads the prepared blog post data (title and content) from the workflow context.
 
     This function DOES NOT interact with the Blogger API. It retrieves the data
@@ -251,6 +254,7 @@ async def read_prepared_blog_post(ctx: Context) -> Dict[str, str] | str:
 
     Args:
         ctx (Context): The LlamaIndex workflow context object.
+        title (str): The title of the blog post to retrieve.
 
     Returns:
         Dict[str, str] | str: A dictionary containing the 'title' and 'content_html'
@@ -259,8 +263,28 @@ async def read_prepared_blog_post(ctx: Context) -> Dict[str, str] | str:
     """
     try:
         state = await ctx.get("state")
-        blog_post = state.get("blog_post", {})
-        return blog_post or "No blog post prepared in context."
+        blog_post = state.get("blog_posts", {}).get(title, None)
+        return blog_post or f"Blog post with title '{title}' not found in context."
     except Exception as e:
         logging.error(f"Error reading prepared blog post from context: {e}")
         return "Failed to read blog post from context."
+    
+async def get_blop_post_titles(ctx: Context) -> List[str]:
+    """Retrieves the titles of all prepared blog posts from the workflow context.
+
+    This function DOES NOT interact with the Blogger API. It retrieves the titles
+    of all blog posts previously stored in the context state.
+
+    Args:
+        ctx (Context): The LlamaIndex workflow context object.
+
+    Returns:
+        List[str]: A list of titles of all prepared blog posts, or an error message string if retrieval fails.
+    """
+    try:
+        state = await ctx.get("state")
+        blog_posts = state.get("blog_posts", {})
+        return list(blog_posts.keys()) if blog_posts else ["No blog posts found in context."]
+    except Exception as e:
+        logging.error(f"Error retrieving blog post titles from context: {e}")
+        return ["Failed to retrieve blog post titles from context."]

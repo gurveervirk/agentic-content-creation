@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import ChatMessage from "./ChatMessage";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +7,7 @@ import { Send, RefreshCw } from "lucide-react";
 const API_BASE = "/api"; // Adjust this as needed for your API endpoint
 
 const Chat = () => {
-  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent" | "system", content: string }>>([]);
+  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent" | "system", content: string, loading?: boolean }>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -47,22 +46,33 @@ const Chat = () => {
     setMessages(prev => [...prev, { sender: "agent", content: "Thinking...", loading: true }]);
     
     try {
-      // Replace this with your actual API call
-      // For now using a timeout to simulate API response
-      setTimeout(() => {
-        setMessages(prev => prev.filter(msg => !msg.loading));
-        setMessages(prev => [...prev, { 
-          sender: "agent", 
-          content: "This is a sample response. Connect to your actual API for real responses."
-        }]);
-        setLoading(false);
-      }, 1500);
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+      const data = await res.json();
+      setMessages(prev => prev.filter(msg => !msg.loading));
+      setMessages(prev => [...prev, { 
+        sender: "agent", 
+        content: data.response || "No response received."
+      }]);
     } catch (error) {
+      console.error("Error sending message:", error);
       setMessages(prev => prev.filter(msg => !msg.loading));
       setMessages(prev => [...prev, { 
         sender: "agent", 
         content: "Sorry, there was an error processing your request."
       }]);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
     }
   };

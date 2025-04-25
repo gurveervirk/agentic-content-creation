@@ -44,7 +44,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ sender, content, loading }) =
             <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
           </div>
         ) : (
-          <ReactMarkdown className="prose prose-sm max-w-none">{content}</ReactMarkdown>
+          <ReactMarkdown components={{
+            p: ({ children }) => <p className="prose prose-sm max-w-none">{children}</p>,
+          }}>{content}</ReactMarkdown>
         )}
       </div>
     </div>

@@ -16,7 +16,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 wflw = Workflow()
 
-app = FastAPI(title="Agent Workflow API")
+# Add /api prefix to all routes
+app = FastAPI(
+    title="Agent Workflow API",
+    root_path="/api",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -37,11 +41,33 @@ async def chat(request: ChatRequest) -> ChatResponse:
 @app.post("/reset")
 async def reset() -> dict[str, str]:
     try:
-        wflw.reset()
+        await wflw.reset_context()
         return {"message": "Workflow reset successfully."}
     except Exception as e:
         logging.error(f"Error resetting workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error resetting workflow: {str(e)}")
+
+
+@app.get("/get-contexts")
+async def get_contexts() -> dict:
+    try:
+        contexts = wflw.ctx_index
+        # Convert contexts dict to a proper string format if it's not already
+        return {"contexts": str(contexts) if contexts else "{}"}
+    except Exception as e:
+        logging.error(f"Error retrieving contexts: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving contexts: {str(e)}")
+    
+@app.post("/load-context")
+async def load_context(id: str) -> dict:
+    try:
+        chat_history = await wflw.load_context(id)
+        if chat_history is None:
+            raise HTTPException(status_code=404, detail="Context not found.")
+        return {"chat_history": chat_history}
+    except Exception as e:
+        logging.error(f"Error loading context: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error loading context: {str(e)}")
 
 @app.get("/")
 async def root() -> dict[str, str]:

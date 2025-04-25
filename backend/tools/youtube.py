@@ -45,11 +45,11 @@ async def write_video_script(ctx: Context, title: str, information: str, intel_k
             ),
         )
         # Set the script in the context
-        state = await ctx.get("state")
-        state["script"] = script.text
-        await ctx.set("state", state)
+        if "scripts" not in state:
+            state["scripts"] = {}
+        state["scripts"][title] = script.text
 
-        result_str = script.text + "\n\nSuccessfully generated and set the video script in the context."
+        result_str = script.text + f"\n\nSuccessfully generated and set the video script in the context, under the key '{title}'."
         if incorrect_keys:
             result_str += f"\n\nThe following keys were not found in the context: {', '.join(incorrect_keys)}"
             
@@ -57,7 +57,12 @@ async def write_video_script(ctx: Context, title: str, information: str, intel_k
     except Exception as e:
         return f"An error occurred while generating the video script: {str(e)}"
 
-async def read_video_script(ctx: Context) -> str:
+async def read_video_script(ctx: Context, title: str) -> str:
     """Read the video script from the context."""
     state = await ctx.get("state")
-    return state["script"]
+    if "scripts" not in state:
+        return "No scripts found in the context."
+    if title not in state["scripts"]:
+        return f"No script found for the title '{title}'."
+    # Return the script
+    return state["scripts"][title]

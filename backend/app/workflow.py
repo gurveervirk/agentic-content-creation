@@ -8,8 +8,9 @@ from llama_index.core.agent.workflow import (
     AgentWorkflow,
     FunctionAgent
 )
+from llama_index.core.workflow import Context
 from datetime import datetime
-from tools import news, youtube, blog, duckduckgo, briefs, arxiv, wikipedia
+from tools import news, youtube, blog, duckduckgo, briefs, arxiv, wikipedia, manager
 from prompts import (
     ARXIV_AGENT_PROMPT,
     MANAGER_AGENT_PROMPT,
@@ -18,21 +19,36 @@ from prompts import (
     WIKIPEDIA_AGENT_PROMPT,
     YOUTUBE_AGENT_PROMPT,
     BLOG_AGENT_PROMPT,
-    EDITOR_AGENT_PROMPT,
-    BRIEF_WRITER_AGENT_PROMPT
+    BRIEF_WRITER_AGENT_PROMPT,
+    TITLE_GEN_PROMPT
 )
+import json
 import os
 import logging
+import asyncio
+from uuid import uuid4
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Helper function to run a coroutine in the background and log errors
+async def _run_and_log_errors(coro, task_name="Background task"):
+    """Runs a coroutine and logs any exceptions."""
+    try:
+        await coro
+    except Exception:
+        logger.exception(f"{task_name} failed.")
+
 class Workflow():
     def __init__(self):        
         Settings.llm = GoogleGenAI(
-            # model="gemini-2.0-flash-lite",
             api_key=os.getenv("GEMINI_API_KEY"),
             temperature=1.0
+        )
+        self.title_gen_llm = GoogleGenAI(
+            model="gemini-2.0-flash-lite",
+            api_key=os.getenv("GEMINI_API_KEY"),
+            temperature=0.1,
         )
         self.news_obj = news.News()
         self.tools = self.create_tools()
@@ -41,7 +57,47 @@ class Workflow():
             agents=self.agents,
             root_agent="ManagerAgent",
         )
-        self.handler = None
+        self.ctx = None
+        self.ctx_id = None
+        self.ctx_index = self.load_contexts_index()
+        self.reverse_ctx_index = {v: k for k, v in self.ctx_index.items()}
+        self.chat_history = None
+
+    def load_contexts_index(self):
+        """
+        Loads the contexts index from the `contexts` directory.
+
+        Args:
+            None
+        Returns:
+            dict: A dictionary containing the context IDs and their corresponding titles.
+        """
+        try:
+            # If the directory and the index file don't exist, create them
+            if not os.path.exists("./contexts"):
+                os.makedirs("./contexts")
+            if not os.path.exists("./contexts/index.json"):
+                with open("./contexts/index.json", "w") as f:
+                    json.dump({}, f)
+
+            ctx_index = {}
+            
+            # Load the index file
+            with open("./contexts/index.json", "r") as f:
+                ctx_index = json.load(f)
+
+            # Check if the index is empty
+            if not ctx_index:
+                logger.info("Contexts index is empty.")
+                return {}
+            
+            return ctx_index
+        except FileNotFoundError:
+            logger.warning("Contexts index file not found. Creating a new one.")
+            return {}
+        except json.JSONDecodeError:
+            logger.error("Error decoding JSON from contexts index file. Creating a new one.")
+            return {}
 
     def create_tools(self) -> dict[str, list[FunctionTool]]:
         news_articles_reader_tool = FunctionTool.from_defaults(
@@ -114,6 +170,11 @@ class Workflow():
             name="DeleteBlogPostTool",
             description="Deletes a blog post by passing the blog ID and post ID. Use ONLY after user confirmation via ManagerAgent.",
         )
+        get_blop_post_titles_tool = FunctionTool.from_defaults(
+            fn=blog.get_blop_post_titles,
+            name="GetBlogPostTitlesTool",
+            description="Get the titles of all blog posts.",
+        )
         duckduckgo_instant_search_tool = FunctionTool.from_defaults(
             fn=duckduckgo.duckduckgo_instant_search,
             name="DuckDuckGoInstantSearchTool",
@@ -149,6 +210,11 @@ class Workflow():
             name="WikipediaSearchTool",
             description="Search Wikipedia for a page related to the given query.",
         )
+        review_content_tool = FunctionTool.from_defaults(
+            fn=manager.review_content,
+            name="ReviewContentTool",
+            description="Review the content of a specific type and key in the context.",
+        )
         duckduckgo_search_tools = [
             duckduckgo_instant_search_tool,
             duckduckgo_full_search_tool,
@@ -179,10 +245,12 @@ class Workflow():
             delete_blog_post_tool,
             read_prepared_blog_post_tool,
             get_intel_briefing_tool,
+            get_blop_post_titles_tool,
         ]
         manager_tools = [
             youtube_video_script_reader_tool,
             read_prepared_blog_post_tool,
+            review_content_tool,
         ]
         brief_writer_tools = [
             write_intel_briefing_tool
@@ -250,13 +318,6 @@ class Workflow():
             can_handoff_to=["ManagerAgent", "BriefWriterAgent"],
             system_prompt=BLOG_AGENT_PROMPT,
         )
-        editor_agent = FunctionAgent(
-            name="EditorAgent",
-            description="Review the blog post and youtube video script and provide feedback.",
-            llm=Settings.llm,
-            can_handoff_to=["ManagerAgent"],
-            system_prompt=EDITOR_AGENT_PROMPT,
-        )
         brief_writer_agent = FunctionAgent(
             name="BriefWriterAgent",
             description="Synthesizes raw research findings or stores prepared content into structured briefs using WriteIntelBriefingTool.",
@@ -270,7 +331,7 @@ class Workflow():
             description="Manage the workflow, including user confirmation steps for actions.",
             llm=Settings.llm,
             tools=self.tools["manager"],
-            can_handoff_to=["NewsAgent", "YoutubeAgent", "ArxivAgent", "DuckDuckGoAgent", "WikipediaAgent", "BlogAgent", "EditorAgent"],
+            can_handoff_to=["NewsAgent", "YoutubeAgent", "ArxivAgent", "DuckDuckGoAgent", "WikipediaAgent", "BlogAgent"],
             system_prompt=MANAGER_AGENT_PROMPT.format(
                 current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             ),
@@ -282,19 +343,69 @@ class Workflow():
             duckduckgo_agent,
             wikipedia_agent,
             blog_agent,
-            editor_agent,
             brief_writer_agent,
             manager_agent,
         ]
     
+    async def update_stored_context(self):
+        """
+        Updates the stored context in the `contexts` directory.
+        Generates a title if it's a new context.
+        """
+        try:
+            if self.ctx is None:
+                raise ValueError("Handler context is not set. Cannot update stored context.")
+            
+            if self.ctx_id is None:
+                # Generate title and update index, using the chat history
+                title = await self.generate_title(self.chat_history)
+                self.ctx_id = str(uuid4())
+                self.reverse_ctx_index[title] = self.ctx_id
+                self.ctx_index[self.ctx_id] = title
+                with open("./contexts/index.json", "w") as f:
+                    json.dump(self.ctx_index, f)
+                logger.info(f"Title generated: {title}")
+
+            elif self.ctx_index[self.ctx_id] is None:
+                # Generate title and update index
+                title = await self.generate_title(self.chat_history)
+                self.reverse_ctx_index[title] = self.ctx_id
+                self.ctx_index[self.ctx_id] = title
+                with open("./contexts/index.json", "w") as f:
+                    json.dump(self.ctx_index, f)
+                logger.info(f"Title generated: {title}")
+            
+            context = self.ctx.to_dict()
+            
+            # Create the directory if it doesn't exist
+            context_dir = f"./contexts/{self.ctx_id}"
+            os.makedirs(context_dir, exist_ok=True)
+
+            # Save the context to a single JSON file
+            with open(f"{context_dir}/ctx.json", "w") as f:
+                json.dump(context, f)
+
+            # Save the chat history to a separate JSON file
+            with open(f"{context_dir}/chat_history.json", "w") as f:
+                json.dump(self.chat_history, f)
+            
+            logger.info(f"Context updated successfully: {self.ctx_id}")
+        except Exception as e:
+            logger.error(f"Error updating context: {e}")
+            raise e
+    
     async def chat(self, message: str) -> str:
         """Process a user message through the agent workflow."""
         try:
+            if self.chat_history is None:
+                self.chat_history = []
+
+            # Append the user message to the chat history
+            self.chat_history.append(message)
             current_agent = None
             
-            ctx = self.handler.ctx if self.handler != None else None
             handler = self.workflow.run(
-                ctx=ctx,
+                ctx=self.ctx,
                 user_msg=message
             )
             complete_response = None
@@ -325,30 +436,49 @@ class Workflow():
                     logging.info(f"  With arguments: {event.tool_kwargs}")
             
             # Set the handler to the current handler for the next request
-            self.handler = handler
+            self.ctx = handler.ctx
 
             if complete_response is None:
                 # If no response was generated, return a default message
                 complete_response = "I'm sorry, I couldn't process your request."
 
             # Clean up the response to remove any "assistant:" prefixes
-            if complete_response.startswith("assistant: "):
+            elif complete_response.startswith("assistant: "):
                 complete_response = complete_response[len("assistant: "):]
-            
-                if current_agent != "ManagerAgent":
-                    # If the last agent was not the manager agent, Reset the handler (FIX IN FUTURE)
-                    self.handler = None
+
+            self.chat_history.append(complete_response)
+
+            # Update the stored context asynchronously
+            update_coro = self.update_stored_context()
+            asyncio.create_task(_run_and_log_errors(asyncio.shield(update_coro), "Context Update"))
 
             return complete_response or "I'm sorry, I couldn't process your request."
             
         except Exception as e:
             logger.error(f"Error in agent workflow: {str(e)}")
             return f"I encountered an error while processing your request: {str(e)}"
-        
-    def reset(self) -> None:
-        """Reset the workflow and its components."""
+
+    async def reset_context(self):
+        """
+        Resets the chat context and agent workflow.
+        """
+        # If the context is not None, save it to the context file
+        if self.ctx is not None:
+            try:
+                # Get the context and save it to a file
+                context = self.ctx.to_dict()
+                with open(f"contexts/{self.ctx_id}/ctx.json", "w") as f:
+                    json.dump(context, f)
+
+                with open(f"contexts/{self.ctx_id}/chat_history.json", "w") as f:
+                    json.dump(self.chat_history, f)
+            except Exception as e:
+                logger.error(f"Error saving context: {e}")
+
+        self.ctx = None
+        self.ctx_id = None
+        self.chat_history = None
         Settings.llm = GoogleGenAI(
-            # model="gemini-2.0-flash-lite",
             api_key=os.getenv("GEMINI_API_KEY"),
             temperature=1.0
         )
@@ -357,4 +487,74 @@ class Workflow():
             agents=self.agents,
             root_agent="ManagerAgent",
         )
-        self.handler = None
+
+    async def load_context(self, id: str) -> list[str]:
+        """
+        Loads the context for the agent workflow, from `contexts` directory.
+
+        Args:
+            ctx: The context to load.
+        Returns:
+            list[str]: A list of strings representing the chat history.
+        """
+        try:
+            if id not in self.ctx_index:
+                raise ValueError(f"Context with id {id} not found.")
+            
+            # Reset the current context, then load the new context
+            await self.reset_context()
+
+            context = json.load(open(f"./contexts/{id}/ctx.json", "r"))
+            self.chat_history = json.load(open(f"./contexts/{id}/chat_history.json", "r"))
+
+            # Create a new context
+            self.ctx = Context.from_dict(
+                workflow=self.workflow,
+                data=context,
+            )
+
+            self.ctx_id = id
+            logger.info(f"Context loaded successfully: {self.ctx_id}")
+
+            return self.chat_history
+            
+        except Exception as e:
+            logger.error(f"Error loading context: {e}")
+            raise e
+        
+    async def generate_title(self, chat: list[str]) -> str:
+        """
+        Generate a title for the given chat using the LLM.
+
+        Args:
+            chat (list[str]): The chat history as a list of strings.
+            
+        Returns:
+            str: The generated title.
+        """
+
+        try:
+            # Format the chat history for the prompt
+            chat = "\n".join([
+                f"User: {message}" if i % 2 == 0 else f"AI: {message}"
+                for i, message in enumerate(chat)
+            ])
+            prompt = TITLE_GEN_PROMPT.format(chat=chat)
+
+            # Generate the title using the LLM
+            title = await self.title_gen_llm.acomplete(
+                prompt=prompt,
+            )
+
+            title = title.text.strip()
+
+            # Extract the title from the response
+            if title.startswith("<title>") and title.endswith("</title>"):
+                title = title[7:-8].strip()
+            else:
+                raise ValueError("Invalid title format.")
+            
+            return None if title == "NONE" else title
+        except Exception as e:
+            logging.info(f"Error generating title: {e}")
+            return None

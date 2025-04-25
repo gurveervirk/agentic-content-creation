@@ -1,42 +1,108 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ChatMessage from "./ChatMessage";
 import { useToast } from "@/hooks/use-toast";
 import { Send, RefreshCw } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSidebar } from "@/components/ui/sidebar";
 
 const API_BASE = "/api";
 
+// Create a shared event bus for direct component communication
+const eventBus = {
+  listeners: new Map(),
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+    return () => this.off(event, callback);
+  },
+  off(event, callback) {
+    if (!this.listeners.has(event)) return;
+    const callbacks = this.listeners.get(event);
+    const index = callbacks.indexOf(callback);
+    if (index !== -1) callbacks.splice(index, 1);
+  },
+  emit(event, data) {
+    if (!this.listeners.has(event)) return;
+    this.listeners.get(event).forEach(callback => callback(data));
+  }
+};
+
+// Export the event bus for other components to use
+export { eventBus };
+
 const ChatView = () => {
-  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent" | "system", content: string }>>([]);
+  const [messages, setMessages] = useState<Array<{ sender: "user" | "agent", content: string, loading?: boolean }>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { openMobile, setOpenMobile } = useSidebar();
 
-  // Listen for context changes via query param
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Listen for events from other components
+  useEffect(() => {
+    // Handle new chat (clear messages)
+    const newChatHandler = () => {
+      console.log("New chat event received, clearing messages");
+      setMessages([]);
+    };
+    
+    // Handle load context
+    const loadContextHandler = (id: string) => {
+      console.log("Load context event received:", id);
+      loadContext(id);
+    };
+
+    // Subscribe to events
+    const unsubscribeNewChat = eventBus.on('new-chat', newChatHandler);
+    const unsubscribeLoadContext = eventBus.on('load-context', loadContextHandler);
+
+    // Check URL params on mount
     const urlParams = new URLSearchParams(window.location.search);
     const contextId = urlParams.get('context');
     
     if (contextId) {
       loadContext(contextId);
     }
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeNewChat();
+      unsubscribeLoadContext();
+    };
   }, []);
 
   const loadContext = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/load-context`, {
+      // Using URLSearchParams to format the query parameters correctly
+      const res = await fetch(`${API_BASE}/load-context?id=${encodeURIComponent(id)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
       });
       
       if (!res.ok) throw new Error("Failed to load context");
       
       const data = await res.json();
-      setMessages(data.chat_history || []);
+      
+      // Parse the chat_history array from the response
+      if (data.chat_history && Array.isArray(data.chat_history)) {
+        // Even indices (0, 2, 4...) are user messages, odd indices (1, 3, 5...) are agent messages
+        const formattedMessages = data.chat_history.map((content: string, index: number) => ({
+          sender: index % 2 === 0 ? "user" : "agent" as "user" | "agent",
+          content
+        }));
+        setMessages(formattedMessages);
+      } else {
+        setMessages([]);
+        console.warn("No chat history found in response:", data);
+      }
       
     } catch (error) {
       console.error("Error loading context:", error);
@@ -56,13 +122,23 @@ const ChatView = () => {
       const res = await fetch(`${API_BASE}/reset`, { method: "POST" });
       if (!res.ok) throw new Error("Network error");
       const data = await res.json();
+      
+      // Clear messages immediately
       setMessages([]);
+      
       toast({
         title: "Chat reset",
         description: data?.message || "Workflow reset successfully.",
         duration: 1500
       });
+      
+      // Clear URL and invalidate contexts
+      window.history.pushState({}, "", "/");
       queryClient.invalidateQueries({ queryKey: ["contexts"] });
+      
+      // Notify other components
+      eventBus.emit('chat-reset', null);
+      
     } catch (error) {
       toast({
         title: "Failed to reset chat",
@@ -80,6 +156,11 @@ const ChatView = () => {
     const userMessage = input;
     setInput("");
     setMessages(prev => [...prev, { sender: "user", content: userMessage }]);
+    
+    // Close mobile sidebar if open
+    if (openMobile) {
+      setOpenMobile(false);
+    }
     
     setLoading(true);
     setMessages(prev => [...prev, { sender: "agent", content: "Thinking...", loading: true }]);
@@ -118,15 +199,16 @@ const ChatView = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white text-black">
+    <div className="flex flex-col h-full bg-white text-black relative">
       {/* Header */}
       <div className="bg-black p-4 text-white shadow-md">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">Chat</h1>
+          <h1 className="text-xl font-bold ml-8 md:ml-0">Chat</h1>
           <button
             onClick={handleReset}
             className="bg-white text-black px-3 py-1 rounded-md flex items-center gap-2 hover:bg-gray-200 transition-all duration-300 shadow-sm hover:shadow-md"
             disabled={loading}
+            aria-label="Reset conversation"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Reset
           </button>
@@ -140,19 +222,22 @@ const ChatView = () => {
             No messages yet. Start a conversation!
           </div>
         ) : (
-          messages.map((message, index) => (
-            <ChatMessage
-              key={index}
-              sender={message.sender}
-              content={message.content}
-              loading={message.loading}
-            />
-          ))
+          <>
+            {messages.map((message, index) => (
+              <ChatMessage
+                key={index}
+                sender={message.sender}
+                content={message.content}
+                loading={message.loading}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </>
         )}
       </div>
       
       {/* Input Area */}
-      <div className="bg-black p-4">
+      <div className="bg-black p-4 sticky bottom-0 z-10">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"

@@ -29,6 +29,8 @@ render-chat-flow/
 - **Workflow-based AI Processing**: Structured application workflow for AI processing
 - **Tool Integration**: Multiple knowledge sources including Wikipedia, arXiv, news and more
 - **Theming**: Custom theming with a purple-based color scheme
+- **Chat History**: Persistent chat history for user reference
+- **Seamless Multi-Source Information Retrieval**: Ability to query multiple sources for information, depending on the user's needs
 
 ## Getting Started
 
