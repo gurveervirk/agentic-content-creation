@@ -1,73 +1,51 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-type Props = {
+interface ChatMessageProps {
   sender: "user" | "agent" | "system";
   content: string;
   loading?: boolean;
-};
+}
 
-const ChatMessage: React.FC<Props> = ({ sender, content, loading = false }) => {
-  const isUser = sender === "user";
-  const isAgent = sender === "agent";
-  const isLoading = loading && isAgent;
-  
-  const bg = isLoading 
-    ? "bg-white text-deep-purple-600 border border-deep-purple-100"
-    : isUser
-      ? "bg-deep-purple-600 text-white"
-      : "bg-white text-deep-purple-600 border border-deep-purple-100";
-
-  // Render loading state for agent
-  if (isLoading) {
-    return (
-      <div className="flex justify-start mb-2">
-        <div className={cn(
-          "rounded-xl px-4 py-2 max-w-[75%] shadow-sm flex items-center gap-2 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-hover-elevation",
-          bg
-        )}>
-          <Loader2 className="animate-spin w-5 h-5" />
-          <span>Thinking...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // For agent, render HTML + markdown. For user, render as-is.
-  let messageBody;
-  if (isAgent) {
-    messageBody = (
-      <ReactMarkdown 
-        components={{
-          h1: ({ node, ...props }) => <h2 {...props} />,
-          pre: ({ node, ...props }) => <pre {...props} />,
-          code: ({ node, ...props }) => <code {...props} />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    );
-  } else {
-    messageBody = <span>{content}</span>;
-  }
-
+const ChatMessage: React.FC<ChatMessageProps> = ({ sender, content, loading }) => {
   return (
     <div
       className={cn(
-        "flex mb-2 transition-all duration-300 ease-in-out transform hover:scale-102 hover:shadow-hover-elevation",
-        isUser ? "justify-end" : "justify-start"
+        "mb-4 flex",
+        sender === "user" ? "justify-end" : "justify-start"
       )}
     >
       <div
         className={cn(
-          "rounded-xl px-4 py-2 max-w-[75%] shadow-sm",
-          bg
+          "max-w-[80%] rounded-lg p-4 shadow-md transition-all duration-300 hover:shadow-lg transform hover:scale-[1.01]",
+          sender === "user"
+            ? "bg-black text-white"
+            : "bg-gray-100 text-black border border-gray-200"
         )}
       >
-        {messageBody}
+        <div className="flex items-center mb-1">
+          <div
+            className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              sender === "user" ? "bg-white" : "bg-black"
+            )}
+          ></div>
+          <span className="font-medium">
+            {sender === "user" ? "You" : sender === "agent" ? "Agent" : "System"}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+            <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+          </div>
+        ) : (
+          <ReactMarkdown className="prose prose-sm max-w-none">{content}</ReactMarkdown>
+        )}
       </div>
     </div>
   );

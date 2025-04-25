@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -62,11 +63,8 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))'
         },
-        'deep-purple': {
-          DEFAULT: '#7842f5',
-          '100': '#7842f5',
-          '600': '#7842f5'
-        }
+        black: '#000000',
+        white: '#FFFFFF'
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -100,7 +98,7 @@ export default {
         'spacing': 'margin, padding',
       },
       boxShadow: {
-        'hover-elevation': '0 10px 15px -3px rgba(26, 31, 44, 0.1), 0 4px 6px -2px rgba(26, 31, 44, 0.05)',
+        'hover-elevation': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       },
       scale: {
         '102': '1.02',

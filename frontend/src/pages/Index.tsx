@@ -1,13 +1,19 @@
 
-import Chat from "@/components/Chat";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import ChatView from "@/components/ChatView";
+import ChatSidebar from "@/components/ChatSidebar";
 
 const Index = () => {
   return (
-    <div className="h-screen w-full">
-      <Chat />
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-white">
+        <ChatSidebar />
+        <div className="flex-1 flex flex-col">
+          <ChatView />
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
 export default Index;
-
